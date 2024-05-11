@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User List with UI design</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        #app {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.1);
+        }
+        
+        input[type="text"], input[type="email"], input[type="adress"], input[type="phone"], input[type="website"], input[type="text"] {
+            width: calc(50% - 10px);
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        
+        li {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        li:last-child {
+            border-bottom: none;
+        }
+        
+        label {
+            font-weight: bold;
+            margin-top: 10px;
+            display: block;
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+        }
+        
+        .letter-container {
+            margin-bottom: 10px;
+        }
+        
+        .letter-container span {
+            color: #007bff;
+            margin-right: 5px;
+            text-decoration: none;
+        }
+
+        .letter-container span.disabled {
+            color: #ccc;
+            cursor: default;
+        }
+        
+        .letter-container span:hover {
+            text-decoration: underline;
+        }
+        
+        .user-details {
+            margin-left: 20px;
+            padding: 0;
+        }
+        
+        .delete-btn {
+            color: rgb(216, 15, 15);
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .delete-btn:hover {
+            text-decoration: underline;
+        }
+        
+        .search-results {
+            margin-top: 10px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <!-- search function -->
+    <div class="search-container">
+        <input type="text" v-model="searchKeyword" placeholder="Search by name">
+        <button @click="searchUsers">Search</button>
+    </div>
+    
+    <!-- Filter by first letter of names, used mouse hover detect to guide user that letters are clickable -->
+    <div class="letter-container">
+        <span v-for="letter in letters" :key="letter" 
+              :class="{ disabled: !isClickable(letter) }"
+              :style="{textDecoration: isHovered(letter) ? 'underline' : 'none' }"
+              @mouseenter="setHovered(letter, true)" @mouseleave="setHovered(letter, false)"
+              @click="toggleFilterByLetter(letter)">
+            {{ letter }}
+        </span>
+    </div>
+    
+    <!-- userlist display -->
+    <ul>
+        <li v-for="user in filteredUsers" :key="user.id">
+            <strong>{{ user.name }}</strong>
+            <ul class="user-details">
+                <li>Email: {{ user.email }}</li>
+                <li>Address: {{ user.address.street }}, {{ user.address.suite }}, {{ user.address.city }}, {{ user.address.zipcode }}</li>
+                <li>Phone: {{ user.phone }}</li>
+                <li>Website: {{ user.website }}</li>
+                <li>Company: {{ user.company.name }} - {{ user.company.catchPhrase }} - {{ user.company.bs }}</li>
+            </ul>
+            <!-- delete data -->
+            <button class="delete-btn" @click="deleteUser(user.id)">Delete</button>
+        </li>
+    </ul>
+
+    <p class="search-results" v-if="searchKeyword !== ''">Search results: {{ filteredUsers.length }}</p>
+
+    <!-- add new user info -->
+    <label>Please add new user information here!</label>
+    <form @submit.prevent="addNewUser">
+        <label>Name:</label>
+        <input type="text" v-model="newUser.name" required><br>
+        <label>Address:</label>
+        <input type="adress" v-model="newUser.adress" required><br>
+        <label>Email:</label>
+        <input type="email" v-model="newUser.email" required><br>
+        <label>Phone:</label>
+        <input type="phone" v-model="newUser.phone" required><br>
+        <label>Website:</label>
+        <input type="website" v-model="newUser.website" required><br>
+        <label>Company:</label>
+        <input type="text" v-model="newUser.company" required><br>
+        <button type="submit">Add</button>
+    </form>
+</div>
+
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: {
+            users: [],
+            searchKeyword: '',
+            searchResults: [],
+            letters: 'abcdefghijklmnopqrstuvwxyz'.toUpperCase().split(''),
+            hoveredLetter: null,
+            filteredLetter: null,
+            newUser: {
+                name: '',
+                address: '',
+                email: '',
+                phone: '',
+                website: '',
+                company: ''
+            }
+        },
+        mounted() {
+            axios.get('https://jsonplaceholder.typicode.com/users')
+                .then(response => {
+                    this.users = response.data;
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                });
+        },
+        computed: {
+            filteredUsers() {
+                if (this.filteredLetter) {
+                    return this.users.filter(user => user.name.charAt(0).toUpperCase() === this.filteredLetter);
+                } else {
+                    return this.searchResults.length > 0 ? this.searchResults : this.users;
+                }
+            }
+        },
+            // delete user information
+        methods: {
+            deleteUser(userId) {
+                this.users = this.users.filter(user => user.id !== userId);
+            },
+            searchUsers() {
+                this.searchResults = this.users.filter(user => {
+                    return user.name.toLowerCase().includes(this.searchKeyword.toLowerCase());
+                });
+            },
+            isHovered(letter) {
+                return this.hoveredLetter === letter;
+            },
+            setHovered(letter, value) {
+                if (this.isClickable(letter)) {
+                    this.hoveredLetter = value ? letter : null;
+                }
+            },
+            toggleFilterByLetter(letter) {
+                if (this.filteredLetter === letter) {
+                    this.filteredLetter = null;
+                } else {
+                    this.filteredLetter = letter;
+                }
+            },
+            isClickable(letter) {
+                return this.users.some(user => user.name.charAt(0).toUpperCase() === letter);
+            },
+
+            // add new user information
+       addNewUser() {
+            const newUser = {
+                id: Math.floor(Math.random() * 1000), // Generating a random ID (temporary solution)
+                name: this.newUser.name,
+                email: this.newUser.email,
+                address: {
+                    street: this.newUser.address,
+                    suite: '',
+                    city: '',
+                    zipcode: ''
+                },
+                phone: this.newUser.phone,
+                website: this.newUser.website,
+                company: {
+                    name: this.newUser.company
+                }
+            };
+
+            // add new user information locally
+            this.users.push(newUser);
+            
+            // add new user to remote API
+            axios.post('https://jsonplaceholder.typicode.com/users', newUser)
+                .then(response => {
+                    console.log('New user added:', response.data);
+                })
+                .catch(error => {
+                    console.error('Error adding new user:', error);
+                });
+            
+            // clear input fields
+            this.newUser = {
+                name: '',
+                address: '',
+                email: '',
+                phone: '',
+                website: '',
+                company: ''
+            };
+            }
+        }
+    });
+</script>
+
+</body>
+</html>

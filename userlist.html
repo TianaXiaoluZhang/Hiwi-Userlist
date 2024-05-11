@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User List</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+</head>
+<body>
+
+<div id="app">
+    <!-- search function -->
+    <input type="text" v-model="searchKeyword" placeholder="Search by name">
+    <button @click="searchUsers">Search</button>
+    
+    <!-- Filter by first letter of names, used mouse hover detect to guide user that letters are clickable -->
+    <div>
+        <span v-for="letter in letters" :key="letter" 
+              :style="{cursor: isClickable(letter) ? 'pointer' : 'default', color: isClickable(letter) ? 'black' : 'gray', textDecoration: isHovered(letter) ? 'underline' : 'none' }"
+              @mouseenter="setHovered(letter, true)" @mouseleave="setHovered(letter, false)"
+              @click="toggleFilterByLetter(letter)">
+            {{ letter }}
+        </span>
+    </div>
+    
+    <!-- userlist display -->
+    <ul>
+        <li v-for="user in filteredUsers" :key="user.id">
+            <strong>{{ user.name }}</strong>
+            <ul>
+                <li>Email: {{ user.email }}</li>
+                <li>Address: {{ user.address.street }}, {{ user.address.suite }}, {{ user.address.city }}, {{ user.address.zipcode }}</li>
+                <li>Phone: {{ user.phone }}</li>
+                <li>Website: {{ user.website }}</li>
+                <li>Company: {{ user.company.name }} - {{ user.company.catchPhrase }} - {{ user.company.bs }}</li>
+            </ul>
+            <!-- delete data -->
+            <button @click="deleteUser(user.id)" style="color:rgb(216, 15, 15);">Delete</button>
+        </li>
+    </ul>
+
+    <p v-if="searchKeyword !== ''">Search results: {{ filteredUsers.length }}</p>
+
+ <!-- Add new user info -->
+    <label>Please add new user information here!</label>
+    <form @submit.prevent="addNewUser">
+        <label>Name:</label>
+        <input type="text" v-model="newUser.name" required><br>
+        <label>Address:</label>
+        <input type="adress" v-model="newUser.adress" required><br>
+        <label>Email:</label>
+        <input type="email" v-model="newUser.email" required><br>
+        <label>Phone:</label>
+        <input type="phone" v-model="newUser.phone" required><br>
+        <label>Website:</label>
+        <input type="website" v-model="newUser.website" required><br>
+        <label>Company:</label>
+        <input type="text" v-model="newUser.company" required><br>
+        <button type="submit" style="color:rgb(23, 130, 11);">Add</button>
+    </form>
+
+    
+</div>
+
+<script>
+var app = new Vue({
+    el: '#app', 
+    data: {
+        users: [], 
+        searchKeyword: '', 
+        searchResults: [], 
+        letters: 'abcdefghijklmnopqrstuvwxyz'.toUpperCase().split(''), // letter list
+        hoveredLetter: null, // mouse touch 
+        filteredLetter: null,
+        newUser: {
+            name: '',
+            address: '',
+            email: '',
+            phone: '',
+            website: '',
+            company: ''
+        }
+    },
+    mounted() {
+        
+        axios.get('https://jsonplaceholder.typicode.com/users')
+            .then(response => {
+                this.users = response.data;
+            })
+            .catch(error => {
+                console.error('Error fetching data:', error);
+            });
+    },
+    computed: {
+        
+        filteredUsers() {
+            if (this.filteredLetter) {
+                return this.users.filter(user => user.name.charAt(0).toUpperCase() === this.filteredLetter);
+            } else {
+                return this.searchResults.length > 0 ? this.searchResults : this.users;
+            }
+        }
+    },
+    methods: {
+        // delte data
+        deleteUser(userId) {
+            this.users = this.users.filter(user => user.id !== userId);
+        },
+        // search users
+        searchUsers() {
+            this.searchResults = this.users.filter(user => {
+                return user.name.toLowerCase().includes(this.searchKeyword.toLowerCase());
+            });
+        },
+        // if the letter is one of the first letter in some unser's name, then it is clickable
+        isClickable(letter) {
+            return this.users.some(user => user.name.charAt(0).toUpperCase() === letter);
+        },
+        // Mouse hover detection
+        setHovered(letter, value) {
+            if (this.isClickable(letter)) {
+                this.hoveredLetter = value ? letter : null;
+            }
+        },
+
+        isHovered(letter) {
+            return this.hoveredLetter === letter;
+        },
+        // back to default letter list
+        toggleFilterByLetter(letter) {
+            if (this.filteredLetter === letter) {
+                this.filteredLetter = null;
+            } else {
+                this.filteredLetter = letter;
+            }
+        },
+       // add new user
+       addNewUser() {
+            const newUser = {
+                id: Math.floor(Math.random() * 1000), // Generating a random ID (temporary solution)
+                name: this.newUser.name,
+                email: this.newUser.email,
+                address: {
+                    street: this.newUser.address,
+                    suite: '',
+                    city: '',
+                    zipcode: ''
+                },
+                phone: this.newUser.phone,
+                website: this.newUser.website,
+                company: {
+                    name: this.newUser.company
+                }
+            };
+            // add new user locally
+            this.users.push(newUser);
+            
+            // add new user to remote API
+            axios.post('https://jsonplaceholder.typicode.com/users', newUser)
+                .then(response => {
+                    console.log('New user added:', response.data);
+                })
+                .catch(error => {
+                    console.error('Error adding new user:', error);
+                });
+            
+            // clear input fields
+            this.newUser = {
+                name: '',
+                address: '',
+                email: '',
+                phone: '',
+                website: '',
+                company: ''
+            };
+        }
+    }
+});
+</script>
+
+</body>
+</html>
